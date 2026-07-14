@@ -56,3 +56,16 @@ Checklist derived from `spec.txt`. Decisions locked in: Go engine, PostgreSQL fi
 - [ ] Public docs site
 - [ ] Workflow template marketplace/sharing mechanism
 - [ ] Contribution guidelines
+
+## Cross-cutting — Full test coverage
+- [ ] Engine: unit tests for every state transition, retry/timeout/SLA escalation path, and approval-chain branch
+- [ ] Engine: crash/replay correctness tests for all event-sourced code paths (not just happy path)
+- [ ] Persistence layer: integration tests against real Postgres for every query/migration
+- [ ] DSL: parser/validator/compiler tests for valid, invalid, and edge-case YAML and TypeScript workflow defs
+- [ ] API: GraphQL resolver tests (queries/mutations, error cases, auth-denied cases)
+- [ ] API: gRPC service tests mirroring GraphQL coverage
+- [ ] Auth middleware: tests for valid/invalid/missing credentials, API key and basic-auth paths
+- [ ] Frontend: component tests for ticket views, workflow visualization, approval actions
+- [ ] Frontend: end-to-end tests for core user flows (create ticket, run workflow, approve/reject step)
+- [ ] Coverage reporting wired into CI with an enforced minimum threshold
+- [ ] Coverage badge/report published alongside CI results

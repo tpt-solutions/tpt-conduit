@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+// Package conduit defines the high-performance, service-to-service gRPC surface
+// for TPT Conduit. It mirrors the core engine mutations and read APIs so that
+// other services (workers, integrations, the Next.js frontend via a gateway)
+// can drive the durable workflow engine without going through GraphQL.
+package conduit;
+
+option go_package = "tptconduit/api/proto;proto";
+
+// Ticket is the generic, domain-agnostic unit of work. All structured data
+// lives in fields_json (a JSON document) so one engine serves every domain.
+message Ticket {
+  string id = 1;
+  string workflow = 2;
+  string workflow_version = 3;
+  string title = 4;
+  string fields_json = 5;
+  string assignee = 6;
+  string queue = 7;
+  string priority = 8;
+  string created_at = 9;
+  string updated_at = 10;
+}
+
+// WorkflowDef is the shared internal workflow definition (IR). The detailed
+// step graph is consumed via GraphQL; gRPC carries identity + metadata for
+// service-to-service discovery and registration confirmation.
+message WorkflowDef {
+  string name = 1;
+  string version = 2;
+  string description = 3;
+  string initial = 4;
+  int32 step_count = 5;
+}
+
+// WorkflowRun is the derived (replayed) state of a workflow execution.
+message WorkflowRun {
+  string id = 1;
+  string ticket_id = 2;
+  string workflow = 3;
+  string workflow_version = 4;
+  string status = 5;
+  string current_step = 6;
+  string output_json = 7;
+  bool failed = 8;
+}
+
+message CreateTicketRequest {
+  string workflow = 1;
+  string version = 2;
+  string title = 3;
+  string fields_json = 4;
+}
+message CreateTicketResponse { Ticket ticket = 1; }
+
+message ApproveRequest {
+  string run_id = 1;
+  string step = 2;
+  string by = 3;
+  string comment = 4;
+}
+message RejectRequest {
+  string run_id = 1;
+  string step = 2;
+  string by = 3;
+  string reason = 4;
+}
+message CancelRequest {
+  string run_id = 1;
+  string reason = 2;
+}
+message Empty {}
+
+message GetTicketRequest { string id = 1; }
+message ListTicketsRequest {}
+message ListTicketsResponse { repeated Ticket tickets = 1; }
+
+message GetRunRequest { string id = 1; }
+message GetRunResponse { WorkflowRun run = 1; }
+message ListRunsRequest {}
+message ListRunsResponse { repeated WorkflowRun runs = 1; }
+
+message GetWorkflowRequest {
+  string name = 1;
+  string version = 2;
+}
+message WorkflowResponse { WorkflowDef workflow = 1; }
+message ListWorkflowsRequest {}
+message ListWorkflowsResponse { repeated WorkflowDef workflows = 1; }
+
+// Conduit is the service-to-service API. Mutations are durable and idempotent
+// with respect to the append-only event log.
+service Conduit {
+  rpc CreateTicket(CreateTicketRequest) returns (CreateTicketResponse);
+  rpc Approve(ApproveRequest) returns (Empty);
+  rpc Reject(RejectRequest) returns (Empty);
+  rpc Cancel(CancelRequest) returns (Empty);
+
+  rpc GetTicket(GetTicketRequest) returns (Ticket);
+  rpc ListTickets(ListTicketsRequest) returns (ListTicketsResponse);
+  rpc GetRun(GetRunRequest) returns (GetRunResponse);
+  rpc ListRuns(ListRunsRequest) returns (ListRunsResponse);
+  rpc GetWorkflow(GetWorkflowRequest) returns (WorkflowResponse);
+  rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse);
+}

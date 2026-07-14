@@ -1,0 +1,16 @@
+{
+  "name": "@tpt-conduit/dsl",
+  "version": "0.1.0",
+  "description": "TypeScript workflow DSL for TPT Conduit (compiles to the engine.WorkflowDef IR).",
+  "type": "module",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "node --experimental-strip-types --test",
+    "example": "node --experimental-strip-types examples/helpdesk.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

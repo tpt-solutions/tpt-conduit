@@ -1,0 +1,65 @@
+{
+  "name": "helpdesk",
+  "version": "1.0.0",
+  "description": "IT helpdesk ticket triage, assignment and resolution.",
+  "initial": "triage",
+  "steps": [
+    {
+      "name": "triage",
+      "kind": "task",
+      "task": "triage_ticket",
+      "next": "resolve",
+      "on_error": "escalate"
+    },
+    {
+      "name": "escalate",
+      "kind": "approval",
+      "approval": {
+        "chain": [
+          {
+            "role": "team_lead"
+          },
+          {
+            "role": "manager"
+          }
+        ]
+      },
+      "next": "resolve"
+    },
+    {
+      "name": "resolve",
+      "kind": "task",
+      "task": "resolve_ticket",
+      "next": "close"
+    },
+    {
+      "name": "close",
+      "kind": "delay",
+      "delay": {
+        "duration": 86400000000000
+      }
+    }
+  ],
+  "slas": [
+    {
+      "name": "first_response",
+      "duration": 1800000000000,
+      "on_breach": "escalate"
+    }
+  ],
+  "routing": [
+    {
+      "if": {
+        "category": "hardware"
+      },
+      "queue": "hw-team",
+      "priority": "high"
+    },
+    {
+      "if": {
+        "category": "access"
+      },
+      "queue": "iam-team"
+    }
+  ]
+}

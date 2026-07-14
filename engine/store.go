@@ -67,6 +67,28 @@ func (s *InMemoryStore) GetWorkflow(ctx context.Context, name, version string) (
 	return w, nil
 }
 
+func (s *InMemoryStore) ListTickets(ctx context.Context) ([]Ticket, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]Ticket, 0, len(s.tickets))
+	for _, t := range s.tickets {
+		out = append(out, t)
+	}
+	return out, nil
+}
+
+func (s *InMemoryStore) ListWorkflows(ctx context.Context) ([]WorkflowDef, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]WorkflowDef, 0)
+	for _, versions := range s.workflows {
+		for _, w := range versions {
+			out = append(out, w)
+		}
+	}
+	return out, nil
+}
+
 func (s *InMemoryStore) WorkflowVersions(ctx context.Context, name string) ([]string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

@@ -112,6 +112,36 @@ func (e *Engine) loadWorkflow(ctx context.Context, name, version string) (Workfl
 	return w, nil
 }
 
+// GetTicket returns a ticket by ID.
+func (e *Engine) GetTicket(ctx context.Context, id string) (Ticket, error) {
+	return e.store.GetTicket(ctx, id)
+}
+
+// ListTickets returns all tickets.
+func (e *Engine) ListTickets(ctx context.Context) ([]Ticket, error) {
+	return e.store.ListTickets(ctx)
+}
+
+// ListWorkflows returns all registered workflow definitions.
+func (e *Engine) ListWorkflows(ctx context.Context) ([]WorkflowDef, error) {
+	return e.store.ListWorkflows(ctx)
+}
+
+// GetWorkflow returns a registered workflow definition by name and version.
+func (e *Engine) GetWorkflow(ctx context.Context, name, version string) (WorkflowDef, error) {
+	return e.loadWorkflow(ctx, name, version)
+}
+
+// ListRuns returns the IDs of all known workflow runs (used by the API layer).
+func (e *Engine) ListRuns(ctx context.Context) ([]string, error) {
+	return e.log.Runs(ctx)
+}
+
+// Events returns the raw event history for a run (the timeline).
+func (e *Engine) Events(ctx context.Context, runID string) ([]Event, error) {
+	return e.log.History(ctx, runID)
+}
+
 // CreateTicket creates a ticket, starts a workflow run, and schedules the first
 // step. It is fully atomic from the caller's perspective: every effect is an
 // append-only event plus a single ticket row.

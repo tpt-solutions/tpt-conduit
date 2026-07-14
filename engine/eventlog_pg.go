@@ -100,8 +100,10 @@ func (l *PostgresEventLog) Runs(ctx context.Context) ([]string, error) {
 type Store interface {
 	SaveTicket(ctx context.Context, t Ticket) error
 	GetTicket(ctx context.Context, id string) (Ticket, error)
+	ListTickets(ctx context.Context) ([]Ticket, error)
 	RegisterWorkflow(ctx context.Context, w WorkflowDef) error
 	GetWorkflow(ctx context.Context, name, version string) (WorkflowDef, error)
+	ListWorkflows(ctx context.Context) ([]WorkflowDef, error)
 	WorkflowVersions(ctx context.Context, name string) ([]string, error)
 }
 
@@ -199,6 +201,50 @@ func (s *PostgresStore) WorkflowVersions(ctx context.Context, name string) ([]st
 			return nil, err
 		}
 		out = append(out, v)
+	}
+	return out, rows.Err()
+}
+
+func (s *PostgresStore) ListTickets(ctx context.Context) ([]Ticket, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, workflow, workflow_version, title, fields, assignee, queue, priority, created_at, updated_at
+		 FROM tickets ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, fmt.Errorf("list tickets: %w", err)
+	}
+	defer rows.Close()
+	var out []Ticket
+	for rows.Next() {
+		var t Ticket
+		var fields []byte
+		if err := rows.Scan(&t.ID, &t.Workflow, &t.WorkflowVer, &t.Title, &fields, &t.Assignee, &t.Queue, &t.Priority, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("scan ticket: %w", err)
+		}
+		if len(fields) > 0 {
+			_ = json.Unmarshal(fields, &t.Fields)
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
+func (s *PostgresStore) ListWorkflows(ctx context.Context) ([]WorkflowDef, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT def FROM workflows ORDER BY name, version`)
+	if err != nil {
+		return nil, fmt.Errorf("list workflows: %w", err)
+	}
+	defer rows.Close()
+	var out []WorkflowDef
+	for rows.Next() {
+		var body []byte
+		if err := rows.Scan(&body); err != nil {
+			return nil, fmt.Errorf("scan workflow: %w", err)
+		}
+		var w WorkflowDef
+		if err := json.Unmarshal(body, &w); err != nil {
+			return nil, err
+		}
+		out = append(out, w)
 	}
 	return out, rows.Err()
 }
