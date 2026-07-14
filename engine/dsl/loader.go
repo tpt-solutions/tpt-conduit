@@ -69,6 +69,9 @@ func (r *Registry) RegisterAll(e *engine.Engine) error {
 	return nil
 }
 
+// Count returns the number of workflow definitions in the registry.
+func (r *Registry) Count() int { return len(r.defs) }
+
 // Resolve returns the definition for a name and version. A version of "latest"
 // or "" resolves to the highest semantic version available for that name.
 func (r *Registry) Resolve(name, version string) (engine.WorkflowDef, error) {
