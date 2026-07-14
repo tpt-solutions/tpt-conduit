@@ -139,8 +139,8 @@ func TestDelayStepFires(t *testing.T) {
 	if run.Steps["manager_approval"].Status != engine.StepWaiting {
 		t.Fatalf("expected manager_approval waiting, got %s", run.Steps["manager_approval"].Status)
 	}
-	_ = eng.Approve(context.Background(), run.ID, "manager_approval", "mgr", "")
-	_ = eng.Approve(context.Background(), run.ID, "manager_approval", "hrbp", "")
+	_ = eng.Approve(context.Background(), run.ID, "manager_approval", "hiring_manager", "")
+	_ = eng.Approve(context.Background(), run.ID, "manager_approval", "hr_bp", "")
 	// Now provision_accounts runs, then equipment_wait (delay 24h) then ship.
 	run = waitFor(t, eng, run.ID, func(r *engine.WorkflowRun) bool {
 		return r.Steps["equipment_wait"] != nil && r.Steps["equipment_wait"].Status == engine.StepWaiting

@@ -38,8 +38,34 @@ jobs:
         run: go build ./...
       - name: Test (in-memory)
         run: go test ./... -timeout 120s
+      - name: Coverage profile
+        # Generated proto code (api/proto) and fixture-only packages
+        # (engine/examples) are excluded; we only gate on the real logic.
+        run: go test ./engine ./api ./engine/dsl ./api/grpc -coverprofile=coverage.out -covermode=atomic -timeout 120s
+      - name: Enforce minimum coverage
+        run: |
+          total=$(go tool cover -func=coverage.out | awk '/^total:/ {gsub(/%/,"",$3); print $3}')
+          echo "Total statement coverage: ${total}% (minimum 55%)"
+          awk -v t="$total" 'BEGIN { if (t + 0 < 55) { print "Coverage below minimum threshold"; exit 1 } }'
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-coverage
+          path: coverage.out
       - name: Test (Postgres backend)
         env:
           PG_TEST: "1"
           DATABASE_URL: "postgres://conduit:conduit@localhost:5432/conduit?sslmode=disable"
         run: go test ./engine -run Postgres -timeout 120s
+
+  ts:
+    name: TypeScript DSL test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Test
+        working-directory: ts
+        run: npm test

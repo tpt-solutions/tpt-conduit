@@ -24,21 +24,42 @@ func NewPostgresEventLog(db *sql.DB) *PostgresEventLog {
 }
 
 func (l *PostgresEventLog) Append(ctx context.Context, e Event) (Event, error) {
-	var seq int64
-	var at time.Time
 	var sched sql.NullTime
 	if e.ScheduleAt != nil {
 		sched = sql.NullTime{Time: *e.ScheduleAt, Valid: true}
 	}
-	err := l.db.QueryRowContext(ctx,
-		`INSERT INTO events (run_id, ticket_id, type, at, payload, schedule_at)
-		 VALUES ($1,$2,$3,$4,$5,$6)
-		 RETURNING seq, at`,
-		e.RunID, e.TicketID, string(e.Type), e.At, e.Payload, sched,
-	).Scan(&seq, &at)
+	tx, err := l.db.BeginTx(ctx, nil)
 	if err != nil {
+		return Event{}, fmt.Errorf("append event: begin tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Atomically reserve the next seq for this run. The INSERT ... ON CONFLICT
+	// DO UPDATE takes a row lock on the run's counter row, so concurrent
+	// appends to the same run_id are serialized and never collide.
+	var seq int64
+	if err := tx.QueryRowContext(ctx,
+		`INSERT INTO event_seq (run_id, next_seq) VALUES ($1, 2)
+		 ON CONFLICT (run_id) DO UPDATE SET next_seq = event_seq.next_seq + 1
+		 RETURNING next_seq - 1`,
+		e.RunID,
+	).Scan(&seq); err != nil {
+		return Event{}, fmt.Errorf("append event: reserve seq: %w", err)
+	}
+
+	var at time.Time
+	if err := tx.QueryRowContext(ctx,
+		`INSERT INTO events (run_id, seq, ticket_id, type, at, payload, schedule_at)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7)
+		 RETURNING at`,
+		e.RunID, seq, e.TicketID, string(e.Type), e.At, e.Payload, sched,
+	).Scan(&at); err != nil {
 		return Event{}, fmt.Errorf("append event: %w", err)
 	}
+	if err := tx.Commit(); err != nil {
+		return Event{}, fmt.Errorf("append event: commit: %w", err)
+	}
+
 	e.Seq = seq
 	if !e.At.IsZero() {
 		e.At = at

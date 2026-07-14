@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -614,6 +615,30 @@ func (e *Engine) advanceApproval(ctx context.Context, run *WorkflowRun, def Work
 	return e.advance(ctx, run, def, step, true)
 }
 
+// authorizeApprover checks that by identifies the approver required by the
+// current link in the chain: if the link names a specific User, by must match
+// that user; otherwise by must match the link's Role. Without this check any
+// caller could grant or reject an approval by claiming an arbitrary identity.
+func authorizeApprover(chain []Approver, idx int, by string) error {
+	if idx < 0 || idx >= len(chain) {
+		return fmt.Errorf("approval: invalid chain index %d", idx)
+	}
+	if by == "" {
+		return fmt.Errorf("approval: 'by' is required")
+	}
+	link := chain[idx]
+	if link.User != "" {
+		if !strings.EqualFold(by, link.User) {
+			return fmt.Errorf("approval: %q is not authorized for this link (requires user %q)", by, link.User)
+		}
+		return nil
+	}
+	if !strings.EqualFold(by, link.Role) {
+		return fmt.Errorf("approval: %q is not authorized for this link (requires role %q)", by, link.Role)
+	}
+	return nil
+}
+
 // Approve records an approval decision for the currently-pending link.
 func (e *Engine) Approve(ctx context.Context, runID, step, by string, comment string) error {
 	run, err := e.GetRun(ctx, runID)
@@ -632,6 +657,9 @@ func (e *Engine) Approve(ctx context.Context, runID, step, by string, comment st
 		return fmt.Errorf("approval %q is not awaiting a decision (status=%s)", step, st.Approval.Status)
 	}
 	idx := st.Approval.Index
+	if err := authorizeApprover(st.Approval.Chain, idx, by); err != nil {
+		return err
+	}
 	if _, err := e.append(ctx, Event{TicketID: run.TicketID, RunID: run.ID, Type: EventApprovalGranted,
 		Payload: mustJSON(ApprovalGrantedPayload{Step: step, Index: idx, By: by})}); err != nil {
 		return err
@@ -658,6 +686,9 @@ func (e *Engine) Reject(ctx context.Context, runID, step, by, reason string) err
 	}
 	if st.Approval.Status != "pending" {
 		return fmt.Errorf("approval %q is not awaiting a decision", step)
+	}
+	if err := authorizeApprover(st.Approval.Chain, st.Approval.Index, by); err != nil {
+		return err
 	}
 	if _, err := e.append(ctx, Event{TicketID: run.TicketID, RunID: run.ID, Type: EventApprovalRejected,
 		Payload: mustJSON(ApprovalRejectedPayload{Step: step, Index: st.Approval.Index, By: by, Reason: reason})}); err != nil {

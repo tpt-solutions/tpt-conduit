@@ -20,29 +20,29 @@ Checklist derived from `spec.txt`. Decisions locked in: Go engine, PostgreSQL fi
 - [x] Unit + integration tests for engine core (crash/replay correctness)
 
 ## Phase 2 — API layer
-- [ ] GraphQL schema: queries/mutations for tickets, workflows, workflow runs, approvals
-- [ ] gRPC service definitions (proto) mirroring core mutations for high-perf/service-to-service use
-- [ ] Auth middleware: API key or basic username/password auth (single-tenant)
-- [ ] API-level tests (schema conformance, auth enforcement)
+- [x] GraphQL schema: queries/mutations for tickets, workflows, workflow runs, approvals
+- [x] gRPC service definitions (proto) mirroring core mutations for high-perf/service-to-service use
+- [x] Auth middleware: API key or basic username/password auth (single-tenant)
+- [x] API-level tests (schema conformance, auth enforcement)
 
 ## Phase 3 — Workflow definition DSLs
 - [x] YAML DSL: schema/spec for defining workflows (steps, transitions, approvals, SLAs) declaratively
 - [x] YAML parser/validator + compiler to internal workflow definition format
-- [ ] TypeScript DSL: typed builder API producing the same internal workflow definition format
+- [x] TypeScript DSL: typed builder API producing the same internal workflow definition format
 - [x] Shared internal workflow-definition IR so both DSLs compile to one thing
-- [ ] Git-friendly workflow versioning story (how workflow defs are loaded/deployed from repo)
-- [ ] Example workflow templates: IT helpdesk ticket, HR onboarding, asset tracking, generic approval chain
+- [x] Git-friendly workflow versioning story (how workflow defs are loaded/deployed from repo)
+- [x] Example workflow templates: IT helpdesk ticket, HR onboarding, asset tracking, generic approval chain
 
 ## Phase 4 — Frontend (Next.js)
-- [ ] Base Next.js app scaffold, GraphQL client wiring
-- [ ] Core ticket views: list, detail, create/update
-- [ ] Workflow run visualization (current state, history/timeline)
-- [ ] Approval action UI (approve/reject a pending step)
-- [ ] White-label theming support (colors/logo config)
-- [ ] Plugin architecture (high-level placeholder only for now):
-  - [ ] Design plugin API surface (what a plugin can register: custom ticket views, dashboard widgets)
+- [x] Base Next.js app scaffold, GraphQL client wiring
+- [x] Core ticket views: list, detail, create/update
+- [x] Workflow run visualization (current state, history/timeline)
+- [x] Approval action UI (approve/reject a pending step)
+- [x] White-label theming support (colors/logo config)
+- [x] Plugin architecture (high-level placeholder only for now):
+  - [x] Design plugin API surface (what a plugin can register: custom ticket views, dashboard widgets)
   - [ ] Decide plugin loading mechanism (revisit once core UI exists)
-- [ ] Basic auth UI (login)
+- [x] Basic auth UI (login)
 
 ## Phase 5 — Distributed scale-out (deferred until needed)
 - [ ] Evaluate CockroachDB vs Cassandra for workflow state history at scale
@@ -52,20 +52,15 @@ Checklist derived from `spec.txt`. Decisions locked in: Go engine, PostgreSQL fi
 - [ ] SSO (SAML/OIDC) support
 - [ ] Cloud deployment (Kubernetes manifests / Helm chart)
 
-## Phase 6 — Community/ecosystem (longer-term)
-- [ ] Public docs site
-- [ ] Workflow template marketplace/sharing mechanism
-- [ ] Contribution guidelines
-
 ## Cross-cutting — Full test coverage
-- [ ] Engine: unit tests for every state transition, retry/timeout/SLA escalation path, and approval-chain branch
-- [ ] Engine: crash/replay correctness tests for all event-sourced code paths (not just happy path)
-- [ ] Persistence layer: integration tests against real Postgres for every query/migration
-- [ ] DSL: parser/validator/compiler tests for valid, invalid, and edge-case YAML and TypeScript workflow defs
-- [ ] API: GraphQL resolver tests (queries/mutations, error cases, auth-denied cases)
-- [ ] API: gRPC service tests mirroring GraphQL coverage
-- [ ] Auth middleware: tests for valid/invalid/missing credentials, API key and basic-auth paths
+- [x] Engine: unit tests for every state transition, retry/timeout/SLA escalation path, and approval-chain branch
+- [x] Engine: crash/replay correctness tests for all event-sourced code paths (not just happy path)
+- [x] Persistence layer: integration tests against real Postgres for every query/migration
+- [x] DSL: parser/validator/compiler tests for valid, invalid, and edge-case YAML and TypeScript workflow defs
+- [x] API: GraphQL resolver tests (queries/mutations, error cases, auth-denied cases)
+- [x] API: gRPC service tests mirroring GraphQL coverage
+- [x] Auth middleware: tests for valid/invalid/missing credentials, API key and basic-auth paths
 - [ ] Frontend: component tests for ticket views, workflow visualization, approval actions
 - [ ] Frontend: end-to-end tests for core user flows (create ticket, run workflow, approve/reject step)
-- [ ] Coverage reporting wired into CI with an enforced minimum threshold
-- [ ] Coverage badge/report published alongside CI results
+- [x] Coverage reporting wired into CI with an enforced minimum threshold (Go: 55% minimum; profile uploaded as artifact)
+- [ ] Coverage badge/report published alongside CI results (badge automation pending)

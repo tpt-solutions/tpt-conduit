@@ -37,5 +37,13 @@ CREATE TABLE IF NOT EXISTS events (
     PRIMARY KEY (run_id, seq)
 );
 
+-- Per-run sequence counter. Append() atomically increments a row here (via
+-- INSERT ... ON CONFLICT DO UPDATE, which takes a row lock) to hand out the
+-- next seq for a run, so concurrent appends to the same run never collide.
+CREATE TABLE IF NOT EXISTS event_seq (
+    run_id   TEXT   PRIMARY KEY,
+    next_seq BIGINT NOT NULL DEFAULT 1
+);
+
 CREATE INDEX IF NOT EXISTS idx_events_ticket ON events (ticket_id);
 CREATE INDEX IF NOT EXISTS idx_events_schedule ON events (schedule_at) WHERE schedule_at IS NOT NULL;
