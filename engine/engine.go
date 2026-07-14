@@ -25,12 +25,12 @@ type Engine struct {
 	workflows map[string]WorkflowDef // key: name@version
 	handlers  map[string]TaskHandler
 
-	pool     *WorkerPool
-	now      func() time.Time
-	closed   bool
-	closeCh  chan struct{}
-	once     sync.Once
-	tick     time.Duration
+	pool    *WorkerPool
+	now     func() time.Time
+	closed  bool
+	closeCh chan struct{}
+	once    sync.Once
+	tick    time.Duration
 }
 
 // NewEngine constructs an engine with the given event log and store. The
@@ -45,7 +45,7 @@ func NewEngine(log EventLog, store Store, workers int) *Engine {
 		handlers:  map[string]TaskHandler{},
 		now:       time.Now,
 		closeCh:   make(chan struct{}),
-		tick:     100 * time.Millisecond,
+		tick:      100 * time.Millisecond,
 	}
 	e.pool = NewWorkerPool(workers, e.executeTask)
 	go e.timerLoop()
@@ -168,8 +168,13 @@ func (e *Engine) CreateTicket(ctx context.Context, workflowName, version, title 
 	return &t, run, nil
 }
 
-// append writes an event to the log and returns the persisted copy.
+// append writes an event to the log and returns the persisted copy. Event
+// timestamps are stamped from the engine clock so that replays, timers and SLA
+// evaluations are deterministic and consistent with test/injected clocks.
 func (e *Engine) append(ctx context.Context, ev Event) (Event, error) {
+	if ev.At.IsZero() {
+		ev.At = e.now().UTC()
+	}
 	return e.log.Append(ctx, ev)
 }
 
@@ -308,7 +313,8 @@ func (e *Engine) applyOne(run *WorkflowRun, def WorkflowDef, ev Event) {
 		st := run.ensureStep(p.Step, def, StepFailed)
 		st.Status = StepFailed
 		st.Error = p.Reason
-		st.Attempt = p.Attempt
+		// Note: Attempt is NOT derived from this event; it is counted from
+		// STEP_STARTED events so that replays stay deterministic.
 	case EventTimerFired:
 		// handled by completion transition; no separate state needed.
 	case EventApprovalRequested:
@@ -351,6 +357,8 @@ func (e *Engine) applyOne(run *WorkflowRun, def WorkflowDef, ev Event) {
 		run.Status = RunStatusFailed
 	case EventRunCancelled:
 		run.Status = RunStatusCancelled
+	case EventRunFailing:
+		run.Failed = true
 	}
 	if ev.At.After(run.UpdatedAt) {
 		run.UpdatedAt = ev.At
@@ -391,7 +399,7 @@ func (e *Engine) dispatch(ctx context.Context, run *WorkflowRun, def WorkflowDef
 	for name, st := range run.Steps {
 		switch st.Kind {
 		case KindTask:
-			if st.Status == StepPending {
+			if st.Status == StepPending && (st.DueAt == nil || !st.DueAt.After(e.now())) {
 				e.pool.Submit(taskItem{RunID: run.ID, Step: name, TicketID: run.TicketID})
 			}
 		case KindDelay:
@@ -437,6 +445,11 @@ func (e *Engine) executeTask(ctx context.Context, t taskItem) error {
 	}
 	out, herr := h(ctx, run, t.Step, ticket.Fields)
 	if herr != nil {
+		// Refresh the run so failure handling sees the up-to-date attempt count
+		// (the StepStarted we just appended increments it).
+		if fr, ferr := e.GetRun(ctx, run.ID); ferr == nil {
+			run = fr
+		}
 		return e.handleTaskFailure(ctx, run, def, t.Step, sd, herr)
 	}
 	if _, err := e.append(ctx, Event{TicketID: run.TicketID, RunID: run.ID, Type: EventStepCompleted, Payload: mustJSON(StepCompletedPayload{Step: t.Step, Output: out})}); err != nil {
@@ -465,13 +478,22 @@ func (e *Engine) handleTaskFailure(ctx context.Context, run *WorkflowRun, def Wo
 			Payload: mustJSON(StepFailedPayload{Step: step, Reason: herr.Error(), Attempt: st.Attempt})}); err != nil {
 			return err
 		}
-		// Reschedule with a timer for the backoff (durable retry).
+		// Reschedule with a durable backoff timer (if a delay is configured).
 		now := e.now()
-		due := now.Add(delay)
+		var due *time.Time
+		if delay > 0 {
+			d := now.Add(delay)
+			due = &d
+		}
 		if _, err := e.append(ctx, Event{TicketID: run.TicketID, RunID: run.ID, Type: EventStepScheduled,
-			At: now, ScheduleAt: &due,
-			Payload: mustJSON(StepScheduledPayload{Step: step, Kind: KindTask, DueAt: due})}); err != nil {
+			At: now, ScheduleAt: due,
+			Payload: mustJSON(StepScheduledPayload{Step: step, Kind: KindTask, DueAt: deref(due)})}); err != nil {
 			return err
+		}
+		// Re-dispatch so the retried task is picked up (immediately or after the
+		// backoff elapses, via the timer sweep).
+		if nr, err := e.GetRun(ctx, run.ID); err == nil {
+			e.dispatch(ctx, nr, def)
 		}
 		return nil
 	}
@@ -481,6 +503,12 @@ func (e *Engine) handleTaskFailure(ctx context.Context, run *WorkflowRun, def Wo
 func (e *Engine) failStep(ctx context.Context, run *WorkflowRun, def WorkflowDef, step, reason string) error {
 	if _, err := e.append(ctx, Event{TicketID: run.TicketID, RunID: run.ID, Type: EventStepFailed,
 		Payload: mustJSON(StepFailedPayload{Step: step, Reason: reason, Attempt: run.Steps[step].Attempt})}); err != nil {
+		return err
+	}
+	// Mark the run as on a failure path so it terminates FAILED even if it later
+	// reaches a terminal "error-handling" step.
+	if _, err := e.append(ctx, Event{TicketID: run.TicketID, RunID: run.ID, Type: EventRunFailing,
+		Payload: mustJSON(RunFailedPayload{LastStep: step, Reason: reason})}); err != nil {
 		return err
 	}
 	return e.advance(ctx, run, def, step, false)
@@ -500,7 +528,7 @@ func (e *Engine) advance(ctx context.Context, run *WorkflowRun, def WorkflowDef,
 	}
 	if next == "" {
 		// No further step: the run terminates.
-		if succeeded {
+		if succeeded && !run.Failed {
 			_, err := e.append(ctx, Event{TicketID: run.TicketID, RunID: run.ID, Type: EventRunCompleted,
 				Payload: mustJSON(RunCompletedPayload{LastStep: completedStep})})
 			return err
@@ -587,13 +615,10 @@ func (e *Engine) Approve(ctx context.Context, runID, step, by string, comment st
 	return nil
 }
 
-// Reject rejects the current approval link, failing the step.
+// Reject rejects the current approval link. A rejected approval fails the run:
+// the request was denied, so there is no productive continuation.
 func (e *Engine) Reject(ctx context.Context, runID, step, by, reason string) error {
 	run, err := e.GetRun(ctx, runID)
-	if err != nil {
-		return err
-	}
-	def, err := e.loadWorkflow(ctx, run.Workflow, run.WorkflowVer)
 	if err != nil {
 		return err
 	}
@@ -608,7 +633,9 @@ func (e *Engine) Reject(ctx context.Context, runID, step, by, reason string) err
 		Payload: mustJSON(ApprovalRejectedPayload{Step: step, Index: st.Approval.Index, By: by, Reason: reason})}); err != nil {
 		return err
 	}
-	return e.advance(ctx, run, def, step, false)
+	_, err = e.append(ctx, Event{TicketID: run.TicketID, RunID: run.ID, Type: EventRunFailed,
+		Payload: mustJSON(RunFailedPayload{LastStep: step, Reason: "approval rejected: " + reason})})
+	return err
 }
 
 // Cancel terminates a run.
@@ -664,8 +691,45 @@ func (e *Engine) Recover(ctx context.Context) error {
 	return nil
 }
 
-// Close stops the worker pool.
+// timerLoop periodically re-dispatches all known runs so that durable timers
+// (delay steps and retry backoffs) fire even when nothing else is happening.
+func (e *Engine) timerLoop() {
+	ticker := time.NewTicker(e.tick)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-e.closeCh:
+			return
+		case <-ticker.C:
+			e.sweep(context.Background())
+		}
+	}
+}
+
+// sweep re-evaluates every run for due timers / ready tasks.
+func (e *Engine) sweep(ctx context.Context) {
+	ids, err := e.log.Runs(ctx)
+	if err != nil {
+		return
+	}
+	for _, id := range ids {
+		run, err := e.GetRun(ctx, id)
+		if err != nil {
+			continue
+		}
+		def, err := e.loadWorkflow(ctx, run.Workflow, run.WorkflowVer)
+		if err != nil {
+			continue
+		}
+		e.dispatch(ctx, run, def)
+	}
+}
+
+// Close stops the worker pool and timer loop.
 func (e *Engine) Close() error {
+	e.once.Do(func() {
+		close(e.closeCh)
+	})
 	e.mu.Lock()
 	if e.closed {
 		e.mu.Unlock()

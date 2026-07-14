@@ -1,0 +1,26 @@
+# TPT Conduit — local development
+
+Brings up a single PostgreSQL node used by the Go engine's event log and
+ticket/workflow stores. Apply `engine/schema.sql` once the database is up.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tpt-conduit-pg
+    environment:
+      POSTGRES_USER: conduit
+      POSTGRES_PASSWORD: conduit
+      POSTGRES_DB: conduit
+    ports:
+      - "5432:5432"
+    volumes:
+      - conduit-pg-data:/var/lib/postgresql/data
+      - ./engine/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U conduit -d conduit"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  conduit-pg-data:

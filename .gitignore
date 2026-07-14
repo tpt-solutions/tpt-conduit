@@ -1,28 +1,19 @@
 # Binaries
 *.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-
-# Test binary
 *.test
-
-# Output of go coverage tool
 *.out
 
-# Go workspace file
-go.work
-go.work.sum
+# Go
+/bin/
 
-# Env files
+# Node (web, phase 4)
+node_modules/
+.next/
+
+# Local env
 .env
-.env.*
+*.local
 
-# IDE
-.vscode/
+# Editor
 .idea/
-
-# OS
-.DS_Store
-Thumbs.db
+.vscode/

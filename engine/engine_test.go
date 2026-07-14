@@ -55,15 +55,18 @@ func newTestEngine(t *testing.T) (*engine.Engine, func(string) map[string]any) {
 func waitFor(t *testing.T, eng *engine.Engine, runID string, pred func(*engine.WorkflowRun) bool, timeout time.Duration) *engine.WorkflowRun {
 	t.Helper()
 	deadline := time.Now().Add(timeout)
+	var last *engine.WorkflowRun
 	for time.Now().Before(deadline) {
 		run, err := eng.GetRun(context.Background(), runID)
-		if err == nil && pred(run) {
-			return run
+		if err == nil {
+			last = run
+			if pred(run) {
+				return run
+			}
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
-	run, _ := eng.GetRun(context.Background(), runID)
-	return run
+	return last
 }
 
 func TestCreateTicketStartsRun(t *testing.T) {

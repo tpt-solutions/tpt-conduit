@@ -171,6 +171,7 @@ const (
 	EventRunCompleted      EventType = "RUN_COMPLETED"
 	EventRunFailed         EventType = "RUN_FAILED"
 	EventRunCancelled      EventType = "RUN_CANCELLED"
+	EventRunFailing        EventType = "RUN_FAILING"
 )
 
 // --- Event payloads (kept as plain structs, serialized into Event.Payload) ---
@@ -285,6 +286,7 @@ type WorkflowRun struct {
 	Current     string                `json:"current_step"`
 	Steps       map[string]*StepState `json:"steps"`
 	Output      map[string]any        `json:"output,omitempty"`
+	Failed      bool                  `json:"failed,omitempty"`
 	CreatedAt   time.Time             `json:"created_at"`
 	UpdatedAt   time.Time             `json:"updated_at"`
 }

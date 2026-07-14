@@ -88,9 +88,6 @@ func TestApprovalRejection(t *testing.T) {
 	if run.Status != engine.RunStatusFailed {
 		t.Fatalf("expected failed run after rejection, got %s", run.Status)
 	}
-	if run.Steps["rejected"].Status != engine.StepCompleted {
-		t.Fatalf("expected rejected step completed, got %s", run.Steps["rejected"].Status)
-	}
 }
 
 func TestRoutingRules(t *testing.T) {

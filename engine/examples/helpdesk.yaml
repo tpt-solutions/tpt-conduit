@@ -37,7 +37,7 @@ steps:
     kind: task
     task: resolve_ticket
     retries: 3
-    retry_delay: 30s
+    retry_delay: 0s
     next: close
     on_error: failed
 

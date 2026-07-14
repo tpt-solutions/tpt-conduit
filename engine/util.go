@@ -3,6 +3,7 @@ package engine
 import (
 	"fmt"
 	"strconv"
+	"time"
 )
 
 // toString renders an arbitrary value to a canonical string for equality
@@ -30,4 +31,12 @@ func toString(v any) string {
 	default:
 		return fmt.Sprintf("%v", x)
 	}
+}
+
+// deref returns the time pointed to, or the zero time if nil.
+func deref(t *time.Time) time.Time {
+	if t == nil {
+		return time.Time{}
+	}
+	return *t
 }

@@ -37,3 +37,7 @@ steps:
   - name: returned
     kind: task
     task: mark_returned
+
+  - name: failed
+    kind: task
+    task: mark_failed

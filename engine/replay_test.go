@@ -32,10 +32,14 @@ func TestCrashRecovery(t *testing.T) {
 	}
 	// Wait until triage + assign have run, then "crash" before close.
 	run = waitFor(t, eng1, run.ID, func(r *engine.WorkflowRun) bool {
-		return r.Steps["assign"].Status == engine.StepCompleted
+		if r == nil {
+			return false
+		}
+		s := r.Steps["assign"]
+		return s != nil && s.Status == engine.StepCompleted
 	}, 2*time.Second)
-	if run.Steps["assign"].Status != engine.StepCompleted {
-		t.Fatalf("precondition failed: assign not done")
+	if run == nil || run.Steps["assign"] == nil || run.Steps["assign"].Status != engine.StepCompleted {
+		t.Fatalf("precondition failed: assign not done (run=%v)", run)
 	}
 	_ = eng1.Close() // crash: worker queue discarded
 
