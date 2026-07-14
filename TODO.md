@@ -24,6 +24,7 @@ Checklist derived from `spec.txt`. Decisions locked in: Go engine, PostgreSQL fi
 - [x] gRPC service definitions (proto) mirroring core mutations for high-perf/service-to-service use
 - [x] Auth middleware: API key or basic username/password auth (single-tenant)
 - [x] API-level tests (schema conformance, auth enforcement)
+- [x] `cmd/conduit-server` runnable entrypoint (wires engine + DSL registry + API server, Postgres or in-memory)
 
 ## Phase 3 — Workflow definition DSLs
 - [x] YAML DSL: schema/spec for defining workflows (steps, transitions, approvals, SLAs) declaratively
