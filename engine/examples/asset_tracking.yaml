@@ -1,0 +1,39 @@
+name: asset-tracking
+version: "1.0.0"
+description: Asset tracking with check-in/check-out approval and return reminders.
+initial: register
+
+steps:
+  - name: register
+    kind: task
+    task: register_asset
+    next: checkout_approval
+    on_error: failed
+
+  - name: checkout_approval
+    kind: approval
+    approval:
+      chain:
+        - role: asset_owner
+        - role: security
+    next: dispatch
+    on_error: returned
+
+  - name: dispatch
+    kind: task
+    task: dispatch_asset
+    next: return_wait
+    on_error: failed
+
+  - name: return_wait
+    kind: delay
+    delay: 48h
+    next: remind_return
+
+  - name: remind_return
+    kind: task
+    task: remind_return
+
+  - name: returned
+    kind: task
+    task: mark_returned

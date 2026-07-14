@@ -1,0 +1,55 @@
+name: it-helpdesk
+version: "1.0.0"
+description: IT helpdesk ticket with triage, assignment, SLA escalation and resolution.
+initial: triage
+
+slas:
+  - name: response_sla
+    duration: 1h
+    on_breach: escalate
+
+routing:
+  - if: { category: hardware }
+    queue: it-hardware
+    priority: high
+  - if: { category: access }
+    queue: it-security
+    priority: high
+  - if: { category: email }
+    queue: it-desk
+  - if: { category: software }
+    queue: it-desk
+
+steps:
+  - name: triage
+    kind: task
+    task: triage_ticket
+    next: assign
+    on_error: failed
+
+  - name: assign
+    kind: task
+    task: assign_owner
+    next: resolve
+    on_error: failed
+
+  - name: resolve
+    kind: task
+    task: resolve_ticket
+    retries: 3
+    retry_delay: 30s
+    next: close
+    on_error: failed
+
+  - name: escalate
+    kind: task
+    task: escalate_ticket
+    next: resolve
+
+  - name: close
+    kind: task
+    task: close_ticket
+
+  - name: failed
+    kind: task
+    task: mark_failed

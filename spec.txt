@@ -1,0 +1,11 @@
+TPT Conduit (Enterprise Workflow & ITSM)
+The "ServiceNow Disruptor"
+Every Fortune 500 company relies on IT Service Management (ITSM) and workflow engines to manage everything from IT helpdesk tickets to HR onboarding and asset tracking. This space is entirely dominated by ServiceNow, a multi-billion-dollar black box that functions as a proprietary relational database wrapped in a rigid, archaic workflow engine. It costs millions to license, takes years to implement, and requires hiring expensive, certified "ServiceNow Developers" just to change a dropdown menu. It is the ultimate example of enterprise software bloat, prioritizing vendor lock-in over actual productivity.
+TPT Conduit reimagines ITSM as a modern, headless, API-first workflow engine. Instead of forcing users into a clunky, proprietary UI, Conduit provides a blazing-fast API and treats "workflows" as code. Developers and IT admins can define approval chains, ticket routing, and SLA escalations using simple YAML or TypeScript. The frontend is a beautiful, highly customizable React application that can be white-labeled or extended via plugins. Under the hood, it uses a distributed, fault-tolerant execution engine to handle millions of concurrent workflow states without breaking a sweat.
+Releasing TPT Conduit as an Apache 2.0 public good democratizes internal tooling. It allows companies to build custom, highly specific internal workflows in days rather than the months it takes to configure legacy ITSM platforms. By making ITSM programmable, open, and free, Conduit destroys the ServiceNow monopoly, returning control of internal operations to the engineering teams who actually have to use the software, and fostering a massive community of shared workflow templates and integrations.
+Tech Stack:
+Core Workflow Engine: Go or Rust, heavily inspired by Temporal for durable, fault-tolerant workflow execution.
+API Layer: GraphQL and gRPC for high-performance, real-time state querying and mutations.
+Workflow Definition: TypeScript and YAML DSLs, allowing workflows to be version-controlled in Git alongside application code.
+Frontend UI: Next.js (React) with a modular, plugin-based architecture for custom ticket views and dashboards.
+Storage: PostgreSQL (for structured ticket data) and CockroachDB or Cassandra (for massive, distributed workflow state history).

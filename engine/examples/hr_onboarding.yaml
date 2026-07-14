@@ -1,0 +1,54 @@
+name: hr-onboarding
+version: "1.0.0"
+description: HR employee onboarding with approvals, equipment provisioning and a waiting period.
+initial: create_record
+
+slas:
+  - name: start_date_sla
+    duration: 72h
+    on_breach: escalate_onboarding
+
+steps:
+  - name: create_record
+    kind: task
+    task: create_employee_record
+    next: manager_approval
+    on_error: failed
+
+  - name: manager_approval
+    kind: approval
+    approval:
+      chain:
+        - role: hiring_manager
+        - role: hr_bp
+    next: provision_accounts
+    on_error: failed
+
+  - name: provision_accounts
+    kind: task
+    task: provision_accounts
+    next: equipment_wait
+    on_error: failed
+
+  - name: equipment_wait
+    kind: delay
+    delay: 24h
+    next: ship_equipment
+
+  - name: ship_equipment
+    kind: task
+    task: ship_equipment
+    next: welcome
+    on_error: failed
+
+  - name: escalate_onboarding
+    kind: task
+    task: escalate_onboarding
+
+  - name: welcome
+    kind: task
+    task: send_welcome
+
+  - name: failed
+    kind: task
+    task: mark_failed

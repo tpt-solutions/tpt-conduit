@@ -1,0 +1,35 @@
+name: generic-approval-chain
+version: "1.0.0"
+description: Generic multi-step human approval chain with SLA escalation.
+initial: request
+
+steps:
+  - name: request
+    kind: task
+    task: open_request
+    next: review
+    on_error: rejected
+
+  - name: review
+    kind: approval
+    approval:
+      chain:
+        - role: manager
+        - role: director
+        - role: finance
+    next: provision
+    on_error: rejected
+
+  - name: provision
+    kind: task
+    task: provision_resource
+    next: notify
+    on_error: rejected
+
+  - name: notify
+    kind: task
+    task: send_notification
+
+  - name: rejected
+    kind: task
+    task: record_rejection
