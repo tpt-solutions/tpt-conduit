@@ -24,7 +24,7 @@ export async function graphqlFetch<T>(
   query: string,
   variables?: Record<string, unknown>
 ): Promise<T> {
-  const authHeader = getAuthHeader();
+  const authHeader = await getAuthHeader();
   if (!authHeader) {
     throw new GraphQLAuthError();
   }

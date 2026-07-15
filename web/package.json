@@ -11,7 +11,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "coverage:badge": "node scripts/coverage-badge.mjs"
+    "coverage:badge": "node scripts/coverage-badge.mjs",
+    "test:e2e": "playwright test",
+    "e2e:install": "playwright install chromium",
+    "e2e": "node scripts/run-e2e.mjs"
   },
   "dependencies": {
     "next": "16.2.10",

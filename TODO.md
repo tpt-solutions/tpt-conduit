@@ -42,7 +42,7 @@ Checklist derived from `spec.txt`. Decisions locked in: Go engine, PostgreSQL fi
 - [x] White-label theming support (colors/logo config)
 - [x] Plugin architecture (high-level placeholder only for now):
   - [x] Design plugin API surface (what a plugin can register: custom ticket views, dashboard widgets)
-  - [ ] Decide plugin loading mechanism (revisit once core UI exists)
+  - [x] Decide plugin loading mechanism (build-time static registration; see web/src/lib/plugins/registry.ts)
 - [x] Basic auth UI (login)
 
 ## Phase 5 — Distributed scale-out (deferred until needed)
@@ -61,7 +61,7 @@ Checklist derived from `spec.txt`. Decisions locked in: Go engine, PostgreSQL fi
 - [x] API: GraphQL resolver tests (queries/mutations, error cases, auth-denied cases)
 - [x] API: gRPC service tests mirroring GraphQL coverage
 - [x] Auth middleware: tests for valid/invalid/missing credentials, API key and basic-auth paths
-- [ ] Frontend: component tests for ticket views, workflow visualization, approval actions
+- [x] Frontend: component tests for ticket views, workflow visualization, approval actions
 - [ ] Frontend: end-to-end tests for core user flows (create ticket, run workflow, approve/reject step)
 - [x] Coverage reporting wired into CI with an enforced minimum threshold (Go: 55% minimum; profile uploaded as artifact)
 - [ ] Coverage badge/report published alongside CI results (badge automation pending)

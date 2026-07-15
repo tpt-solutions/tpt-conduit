@@ -5,9 +5,10 @@ import { TICKET_QUERY, RUNS_QUERY } from "@/lib/queries";
 import { Ticket, WorkflowRun } from "@/lib/types";
 import { StatusBadge } from "@/components/StatusBadge";
 
-export default async function TicketDetailPage({ params }: { params: { id: string } }) {
+export default async function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const [ticketData, runsData] = await Promise.all([
-    graphqlFetch<{ ticket: Ticket | null }>(TICKET_QUERY, { id: params.id }),
+    graphqlFetch<{ ticket: Ticket | null }>(TICKET_QUERY, { id }),
     graphqlFetch<{ runs: WorkflowRun[] }>(RUNS_QUERY),
   ]);
 

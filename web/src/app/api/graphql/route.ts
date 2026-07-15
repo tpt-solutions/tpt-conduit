@@ -6,7 +6,7 @@ const API_URL = process.env.CONDUIT_API_URL || "http://localhost:8080";
 // Same-origin proxy so client components can call GraphQL without ever
 // seeing the stored credential — it's attached here from the httpOnly cookie.
 export async function POST(req: NextRequest) {
-  const authHeader = getAuthHeader();
+  const authHeader = await getAuthHeader();
   if (!authHeader) {
     return NextResponse.json({ errors: [{ message: "Not authenticated" }] }, { status: 401 });
   }

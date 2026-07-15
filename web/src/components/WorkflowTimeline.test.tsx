@@ -57,7 +57,7 @@ const approvalPending = {
 const approvalGranted = {
   name: "manager_approval",
   kind: "approval" as const,
-  status: "GRANTED" as const,
+  status: "COMPLETED" as const,
   attempt: 1,
   output: null,
   error: null,

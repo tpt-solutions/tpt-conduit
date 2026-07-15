@@ -9,10 +9,11 @@ import { WorkflowTimeline } from "@/components/WorkflowTimeline";
 
 const TERMINAL_STATUSES = new Set(["COMPLETED", "FAILED", "CANCELLED"]);
 
-export default async function RunDetailPage({ params }: { params: { id: string } }) {
+export default async function RunDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const [runData, eventsData] = await Promise.all([
-    graphqlFetch<{ run: WorkflowRun | null }>(RUN_QUERY, { id: params.id }),
-    graphqlFetch<{ events: ConduitEvent[] }>(EVENTS_QUERY, { runId: params.id }),
+    graphqlFetch<{ run: WorkflowRun | null }>(RUN_QUERY, { id }),
+    graphqlFetch<{ events: ConduitEvent[] }>(EVENTS_QUERY, { runId: id }),
   ]);
 
   if (!runData.run) {
@@ -37,7 +38,7 @@ export default async function RunDetailPage({ params }: { params: { id: string }
         </div>
       </div>
 
-      {run.failed ? <div className="error-banner">Failed: {run.failed}</div> : null}
+      {run.failed ? <div className="error-banner">Run failed</div> : null}
 
       <h2 style={{ fontSize: 15 }}>Steps</h2>
       <WorkflowTimeline run={run} />

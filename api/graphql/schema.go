@@ -235,7 +235,15 @@ func NewSchema(e *engine.Engine) (gql.Schema, error) {
 			"tickets": &gql.Field{
 				Type: gql.NewNonNull(gql.NewList(gql.NewNonNull(ticketType))),
 				Resolve: func(p gql.ResolveParams) (any, error) {
-					return e.ListTickets(p.Context)
+					ts, err := e.ListTickets(p.Context)
+					if err != nil {
+						return nil, err
+					}
+					out := make([]*engine.Ticket, 0, len(ts))
+					for i := range ts {
+						out = append(out, &ts[i])
+					}
+					return out, nil
 				},
 			},
 			"ticket": &gql.Field{
@@ -245,7 +253,11 @@ func NewSchema(e *engine.Engine) (gql.Schema, error) {
 				},
 				Resolve: func(p gql.ResolveParams) (any, error) {
 					id, _ := p.Args["id"].(string)
-					return e.GetTicket(p.Context, id)
+					t, err := e.GetTicket(p.Context, id)
+					if err != nil {
+						return nil, err
+					}
+					return &t, nil
 				},
 			},
 			"workflows": &gql.Field{

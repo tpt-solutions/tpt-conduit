@@ -12,7 +12,7 @@ export function buildBasicAuthHeader(username: string, password: string): string
 }
 
 /** Server-only: read the stored Authorization header value, if the user is logged in. */
-export function getAuthHeader(): string | null {
-  const value = cookies().get(AUTH_COOKIE)?.value;
+export async function getAuthHeader(): Promise<string | null> {
+  const value = (await cookies()).get(AUTH_COOKIE)?.value;
   return value || null;
 }

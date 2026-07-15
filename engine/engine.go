@@ -386,6 +386,7 @@ func (e *Engine) applyOne(run *WorkflowRun, def WorkflowDef, ev Event) {
 		run.Status = RunStatusCompleted
 	case EventRunFailed:
 		run.Status = RunStatusFailed
+		run.Failed = true
 	case EventRunCancelled:
 		run.Status = RunStatusCancelled
 	case EventRunFailing:

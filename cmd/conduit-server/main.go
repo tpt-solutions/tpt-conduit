@@ -55,6 +55,7 @@ func main() {
 	if err := registry.RegisterAll(e); err != nil {
 		log.Fatalf("register workflows: %v", err)
 	}
+	registerExampleTasks(e)
 	log.Printf("loaded %d workflow definition(s) from %s", registry.Count(), workflowsDir)
 
 	srv, err := api.NewServer(e, api.AuthConfig{Username: username, Password: password, APIKeys: apiKeys})
@@ -95,4 +96,29 @@ func splitComma(s string) []string {
 		}
 	}
 	return out
+}
+
+// registerExampleTasks binds no-op success handlers for the tasks used by the
+// bundled example workflows (engine/examples). Without these the engine has no
+// executor for a task step and the step fails, so the example flows can't
+// progress to their approval steps. A real deployment overrides these with
+// domain handlers; these exist so the demo + e2e suite run end-to-end.
+func registerExampleTasks(e *engine.Engine) {
+	tasks := []string{
+		// generic-approval-chain
+		"open_request", "provision_resource", "send_notification", "record_rejection",
+		// asset_tracking
+		"register_asset", "dispatch_asset", "remind_return", "mark_returned", "mark_failed",
+		// helpdesk
+		"triage_ticket", "assign_owner", "resolve_ticket", "escalate_ticket", "close_ticket",
+		// hr_onboarding
+		"create_employee_record", "provision_accounts", "ship_equipment",
+		"escalate_onboarding", "send_welcome",
+	}
+	noop := func(ctx context.Context, run *engine.WorkflowRun, step string, fields map[string]any) (map[string]any, error) {
+		return map[string]any{"step": step, "ok": true}, nil
+	}
+	for _, key := range tasks {
+		e.RegisterTask(key, noop)
+	}
 }
